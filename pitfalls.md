@@ -208,3 +208,62 @@ const char g_szBuffer[] = "123456"; // 写入.cpp中
 ## 6. C++中函数默认实参的声明
 
 ## 7. C/C++结构体字节对齐与`<cstddef>`中`offsetof`的使用
+
+## 7. 成员函数中的静态变量
+类的**成员函数中的静态变量**与类的**静态成员变量**具有同样的特性，当同一个类的两个对象调用这个包含静态变量的成员函数时，不同对象访问的是同一个静态变量。示例代码如下：
+```cpp
+#include <iostream>
+using std::cout;
+
+class test
+{
+private:
+    int num;
+public:
+    test(/* args */);
+    ~test();
+
+    int increase();
+    int getNum();
+};
+
+test::test(/* args */)
+{
+    num=0;
+}
+
+test::~test()
+{
+}
+
+int test::increase(/* args */)
+{
+    static int invokeTimes=0;
+
+    num++;
+    invokeTimes++;
+
+    return invokeTimes;
+}
+
+int test::getNum(/* args */)
+{
+    return num;
+}
+
+int main(void)
+{
+    test a,b;
+    int invoketimes;
+    a.increase();
+    b.increase();
+    invoketimes=b.increase();
+    cout<<"a = "<<a.getNum()<<", b = "<<b.getNum()<<", function increase() is invoked for "<<invoketimes<<" times.\n";
+
+    return 0;
+}
+```
+程序输出：
+```
+a = 1, b = 2, function increase() is invoked for 3 times.
+```

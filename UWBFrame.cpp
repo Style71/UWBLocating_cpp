@@ -1,6 +1,8 @@
 #include <iostream>
 #include <unistd.h>
 #include <time.h>
+//#define NDEBUG
+#include <cassert>
 #include <wiringSerial.h>
 #include "UWBFrame.h"
 
@@ -9,10 +11,14 @@ using std::cerr, std::cout;
 UWBFrame::UWBFrame(/* args */)
 {
     fileDescription_UWB = -1;
+    iState = 0;
+    status = No_Frame;
 }
 
 UWBFrame::UWBFrame(const char *device_path)
 {
+    iState = 0;
+    status = No_Frame;
     // Open UWB serial port.
     fileDescription_UWB = serialOpen(device_path, 921600);
     if (fileDescription_UWB < 0)
@@ -63,6 +69,9 @@ bool UWBFrame::open(const char *device_path)
             time(&rawtime);
             localTime = localtime(&rawtime);
             UWBRawLog.open("UWB_Raw_Log%04d-%02d-%02d-%02d-%02d-%02d.txt", ofstream::out, localTime->tm_year + 1900, localTime->tm_mon + 1, localTime->tm_mday, localTime->tm_hour, localTime->tm_min, localTime->tm_sec);
+
+            iState = 0;
+            status = No_Frame;
         }
     }
     else
@@ -76,6 +85,7 @@ void UWBFrame::close()
         serialClose(fileDescription_UWB);
         fileDescription_UWB = -1;
         UWBRawLog.close();
+        status = No_Frame;
     }
     else
         cerr << "Failed to close UWB device port cause current UWBFrame object is not associated with a serial port.\n";
@@ -93,39 +103,19 @@ UWBFrame_Type UWBFrame::updateData()
         if (iSize > UWB_SERIAL_BUFFER_SIZE)
             iSize = UWB_SERIAL_BUFFER_SIZE;
         // copy the data into the buffer:
-        result = read(fileDescription_UWB, buffer, iSize);
-        UWBRawLog.write(buffer, result);
+        result = read(fileDescription_UWB, buf, iSize);
+        UWBRawLog.write(buf, result);
 
-        unsigned char *msg = buffer;
+        unsigned char *msg = buf;
         int count = result;
-#define UWB_MESSAGE_BUFFERSIZE 8192
-        static int iState = 0; //State: 0 - Idle; 1 - Get UWB message starting symbol '0x55'; 2 - Get function mark '0x02'/'0x03'/'0x04'; 3 - Get fitst byte of framelength; 4 - Get second byte of framelength; 5 - Dispatch message.
-        static char buf[UWB_MESSAGE_BUFFERSIZE];
-        static int bufIndex;
-        static uint8_t ucChecksum;
-        static uint16_t FrameLength;
-        static int remainingBytes;
         UWBFrame_Type retVal = No_Frame;
-
-        static char isInitializeBuffer = 0;
-
-        // Initialize UWBDataBuffer.
-        if (isInitializeBuffer == 0)
-        {
-            for (int i = 0; i < NODENUM; i++)
-            {
-                UWBDataBuffer[i].head = 0;
-                UWBDataBuffer[i].tail = 0;
-            }
-            isInitializeBuffer = 1;
-        }
 
         while (count > 0)
         {
             switch (iState)
             {
             case 0:
-                // If we get GPS message starting character '$', initialize the state machine and clear the message buffer.
+                // If we get UWB message starting character '$', initialize the state machine and clear the message buffer.
                 if (*msg == 0x55)
                 {
                     iState = 1;
@@ -135,7 +125,7 @@ UWBFrame_Type UWBFrame::updateData()
                 }
                 break;
             case 1:
-                // If we get GPS message end character '*', go to checksum state.
+                // If we get UWB message type character, go to next state.
                 if ((*msg == 0x00) || (*msg == 0x01) || (*msg == 0x02) || (*msg == 0x03) || (*msg == 0x04))
                 {
                     buf[bufIndex++] = *msg;
@@ -196,33 +186,30 @@ UWBFrame_Type UWBFrame::updateData()
                             break;
                         case 0x02:
                             unpackNodeFrame0Data(buf);
+                            // Copy node frame0 to current object's member variable.
+                            frame0 = nodeFrame0Data_;
+                            // Copy data in frame0 to data buffer.
                             for (int i = 0; i < nodeFrame0Data_.framePart.validNodeQuantity; i++)
                             {
                                 int id = nodeFrame0Data_.nodeIDList[i];
                                 int DataLength = nodeFrame0Data_.node[id]->dataLength;
-                                int size;
 
-                                if ((UWBDataBuffer[id].tail + DataLength) > (QUEUE_BUFFERSIZE - 1))
-                                {
-                                    size = QUEUE_BUFFERSIZE - UWBDataBuffer[id].tail;
-                                    memcpy(UWBDataBuffer[id].buffer + UWBDataBuffer[id].tail, nodeFrame0Data_.node[id]->data, size);
-                                    memcpy(UWBDataBuffer[id].buffer, nodeFrame0Data_.node[id]->data + size, DataLength - size);
-                                    UWBDataBuffer[id].tail = DataLength - size;
-                                }
-                                else
-                                {
-                                    memcpy(UWBDataBuffer[id].buffer + UWBDataBuffer[id].tail, nodeFrame0Data_.node[id]->data, DataLength);
-                                    UWBDataBuffer[id].tail += DataLength;
-                                }
+                                assert(id < MAX_POSSIBLE_NODE_NUM);
+                                for (int j = 0; j < DataLength; j++)
+                                    UWBDataBuffer[id].push_back(nodeFrame0Data_.node[id]->data[j]);
                             }
-                            retVal |= GET_NLINK_FRAME0;
+                            retVal |= UWB_Node_Frame0;
+                            status |= UWB_Node_Frame0;
                             break;
                         case 0x03:
 
                             break;
                         case 0x04:
                             unpackNodeFrame2Data(buf);
-                            retVal |= GET_NLINK_FRAME2;
+                            // Copy node frame2 to current object's member variable.
+                            frame2 = nodeFrame2Data_;
+                            retVal |= UWB_Node_Frame2;
+                            status |= UWB_Node_Frame2;
                             break;
                         default:
                             break;
@@ -251,8 +238,16 @@ UWBFrame_Type UWBFrame::updateData()
 
 bool UWBFrame::is_getNewFrame(UWBFrame_Type type)
 {
+    return (type && status);
 }
 
 bool UWBFrame::getFrame(UWBFrame_Type type)
 {
+    if (type && status)
+    {
+        status &= (~type);
+        return true;
+    }
+    else
+        return false;
 }

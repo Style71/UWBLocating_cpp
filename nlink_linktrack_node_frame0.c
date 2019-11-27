@@ -25,7 +25,7 @@ void unpackNodeFrame0Data(uint8_t *byteArray)
 
         if (!nodeFrame0Data_.node[id])
         {
-            nodeFrame0Data_.node[id] = malloc(sizeof(Node0_t));
+            nodeFrame0Data_.node[id] = (Node0_t*)malloc(sizeof(Node0_t));
         }
         memcpy(nodeFrame0Data_.node[id], byteArray + address, currentNodeSize);
         nodeFrame0Data_.nodeIDList[i] = id;

@@ -22,7 +22,7 @@ void unpackNodeFrame2Data(uint8_t *byteArray)
 
         if (!nodeFrame2Data_.node[rawNode.id])
         {
-            nodeFrame2Data_.node[rawNode.id] = malloc(sizeof(Node2_t));
+            nodeFrame2Data_.node[rawNode.id] = (Node2_t*)malloc(sizeof(Node2_t));
         }
         nodeFrame2Data_.node[rawNode.id]->role = rawNode.role;
         nodeFrame2Data_.node[rawNode.id]->id = rawNode.id;

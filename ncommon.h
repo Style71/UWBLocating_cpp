@@ -7,8 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NODENUM 6
-
 enum LPSRole {
   kRoleNode,     //!< 节点，通常代表所有类型
   kRoleAnchor,   //!< 基站
@@ -25,16 +23,6 @@ extern const float kVelMultiply_;
 extern const float kAngleMultiply_;
 extern const float kRssiMultiply_;
 extern const float kEopMultiply_;
-
-#define QUEUE_BUFFERSIZE 65536
-typedef struct
-{
-    unsigned char buffer[QUEUE_BUFFERSIZE];
-    int head;
-    int tail;
-} Queue;
-
-extern Queue UWBDataBuffer[NODENUM];
 
 typedef struct {
   uint8_t byteArray[3];
@@ -56,9 +44,5 @@ void uint8ToFloat(uint8_t src[], float dst[], int arrayLength, float multiply);
 //根据传入的数据 data 及 总长度
 // length，进行和校验（校验和在最后一字节），成功返回1，否则0
 uint8_t verifyCheckSum(uint8_t *data, int32_t length);
-
-#define GET_NLINK_FRAME0  0x00000001
-#define GET_NLINK_FRAME2  0x00000002
-int UWBMessageProcess(unsigned char *msg, int count);
 
 #endif // NCOMMON_H
