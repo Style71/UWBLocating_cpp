@@ -6,7 +6,9 @@
 #include <wiringSerial.h>
 #include "UWBFrame.h"
 
-using std::cerr, std::cout;
+using std::cerr;
+using std::cout;
+using std::ofstream;
 
 UWBFrame::UWBFrame(/* args */)
 {
@@ -51,6 +53,7 @@ UWBFrame::~UWBFrame()
 
 bool UWBFrame::open(const char *device_path)
 {
+    bool bIsOpened = false;
     if (fileDescription_UWB < 0)
     {
         // Open UWB serial port.
@@ -59,6 +62,7 @@ bool UWBFrame::open(const char *device_path)
             cerr << "Failed to open " << device_path << " for UWB device.\n";
         else
         {
+            bIsOpened = true;
             cout << "Open " << device_path << " for UWB device.\n";
             // Clear all data in the serial buffer.
             serialFlush(fileDescription_UWB);
@@ -76,6 +80,7 @@ bool UWBFrame::open(const char *device_path)
     }
     else
         cerr << "Unable to open " << device_path << " cause current UWBFrame object is already associated with a serial port.\n";
+    return bIsOpened;
 }
 
 void UWBFrame::close()
@@ -91,7 +96,7 @@ void UWBFrame::close()
         cerr << "Failed to close UWB device port cause current UWBFrame object is not associated with a serial port.\n";
 }
 
-UWBFrame_Type UWBFrame::updateData()
+uint8_t UWBFrame::updateData()
 {
     int iSize, result;
     // obtain data size:
@@ -108,7 +113,7 @@ UWBFrame_Type UWBFrame::updateData()
 
         unsigned char *msg = buf;
         int count = result;
-        UWBFrame_Type retVal = No_Frame;
+        uint8_t retVal = No_Frame;
 
         while (count > 0)
         {
@@ -188,6 +193,7 @@ UWBFrame_Type UWBFrame::updateData()
                             unpackNodeFrame0Data(buf);
                             // Copy node frame0 to current object's member variable.
                             frame0 = nodeFrame0Data_;
+                            cout<<"Get Frame0\n";
                             // Copy data in frame0 to data buffer.
                             for (int i = 0; i < nodeFrame0Data_.framePart.validNodeQuantity; i++)
                             {
@@ -208,6 +214,7 @@ UWBFrame_Type UWBFrame::updateData()
                             unpackNodeFrame2Data(buf);
                             // Copy node frame2 to current object's member variable.
                             frame2 = nodeFrame2Data_;
+                            cout<<"Get Frame2\n";
                             retVal |= UWB_Node_Frame2;
                             status |= UWB_Node_Frame2;
                             break;

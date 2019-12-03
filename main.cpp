@@ -67,14 +67,14 @@ int main(int argc, char *argv[])
     initSystime();
 
 #define MAX_SERIALPORT_PATH_NAME_SIZE 32
-    char deviceName_UWB[MAX_SERIALPORT_PATH_NAME_SIZE] = "/dev/ttyS21";
+    char deviceName_UWB[MAX_SERIALPORT_PATH_NAME_SIZE] = "/dev/ttyUSB0";
     // If additional arguments are given, set serial port of the device according to the arguments.
     if (argc > 1)
     {
         int i = 0;
         while ((argv[1][i] != '\0') && (i < (MAX_SERIALPORT_PATH_NAME_SIZE - 1)))
         {
-            deviceName_UWB[i] = argv[2][i];
+            deviceName_UWB[i] = argv[1][i];
             i++;
         }
         deviceName_UWB[i] = '\0';

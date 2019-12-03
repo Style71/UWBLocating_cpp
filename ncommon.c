@@ -1,6 +1,4 @@
 ﻿#include "ncommon.h"
-#include "nlink_linktrack_node_frame2.h"
-#include "nlink_linktrack_node_frame0.h"
 
 const float kVoltageMultiply_ = 1000.0f;
 const float kPosMultiply_ = 1000.0f;
@@ -9,8 +7,6 @@ const float kVelMultiply_ = 10000.0f;
 const float kAngleMultiply_ = 100.0f;
 const float kRssiMultiply_ = -2.0f;
 const float kEopMultiply_ = 100.0f;
-
-Queue UWBDataBuffer[NODENUM];
 
 int stringToHex(char *str, uint8_t *out)
 {

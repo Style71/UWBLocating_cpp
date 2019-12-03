@@ -24,14 +24,14 @@ private:
     int fileDescription_UWB;
 
 #define UWB_SERIAL_BUFFER_SIZE 8192
-    char buf[UWB_SERIAL_BUFFER_SIZE];
+    unsigned char buf[UWB_SERIAL_BUFFER_SIZE];
     int iState; //State: 0 - Idle; 1 - Get UWB message starting symbol '0x55'; 2 - Get function mark '0x02'/'0x03'/'0x04'; 3 - Get fitst byte of framelength; 4 - Get second byte of framelength; 5 - Dispatch message.
     int bufIndex;
     uint8_t ucChecksum;
     int remainingBytes;
     uint16_t FrameLength;
 
-    int status;
+    uint8_t status;
 
 public:
     UWBFrame();
@@ -40,7 +40,7 @@ public:
 
     bool open(const char *device_path);
     void close();
-    UWBFrame_Type updateData();
+    uint8_t updateData();
     bool is_getNewFrame(UWBFrame_Type type);
     bool getFrame(UWBFrame_Type type);
 
